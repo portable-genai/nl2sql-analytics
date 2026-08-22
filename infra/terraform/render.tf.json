@@ -1,0 +1,8 @@
+{
+  "locals": {
+    "render_region": "asia-southeast1",
+    "render_package_name": "nl2sql_analytics",
+    "render_env_prefix": "NL2SQL",
+    "render_catalog_id": "H1"
+  }
+}

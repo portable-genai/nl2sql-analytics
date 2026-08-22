@@ -1,0 +1,48 @@
+# Certified semantic layer for NL2SQL Semantic Analyst (H1): metrics as DATA, not code.
+#
+# This file is versioned configuration, loaded by `domain/semantic_layer.py`. A metric that is
+# not written here does not exist to this service: the resolver refuses it and names the nearest
+# certified alternative. An EMPTY file refuses every question (fail-closed), which is why the
+# loader treats a missing or unreadable file as "no certified metrics", never as "allow all".
+#
+# Each metric carries the SQL FRAGMENT the deterministic composer stitches into a bounded,
+# read-only SELECT. The fragment references only columns the backing dataset declares below; the
+# composer validates that before any query runs, so a fragment can never reach a column the layer
+# did not certify. `definition_version` is cited on every answer, so a figure is traceable to the
+# exact definition that produced it. Every dataset and party here is obviously fictional.
+
+version: "2026-08-01"
+
+# The physical datasets metrics may bind to. `columns` is the closed allow-list the composer
+# validates dimensions and fragments against; `tenant_column` is the column the row-level policy
+# predicate is injected on (see policies.yaml). `row_cap` bounds every result set from this table.
+datasets:
+  orders_daily:
+    table: orders_daily
+    columns: [order_date, region, tenant, amount, status]
+    tenant_column: tenant
+    row_cap: 1000
+  customers:
+    table: customers
+    columns: [signup_date, region, tenant, segment, active]
+    tenant_column: tenant
+    row_cap: 1000
+
+# The certified metrics. `allowed_dimensions` is the closed set a question may group by; anything
+# else refuses. `grain` is the declared reporting grain. `backing_dataset` keys into `datasets`
+# above and is the dataset whose H4 certification status gates the answer.
+metrics:
+  revenue:
+    title: Total revenue
+    aggregation: "SUM(amount)"
+    grain: daily
+    backing_dataset: orders_daily
+    allowed_dimensions: [region, order_date, status]
+    definition_version: v3
+  active_customers:
+    title: Active customers
+    aggregation: "SUM(active)"
+    grain: daily
+    backing_dataset: customers
+    allowed_dimensions: [region, segment]
+    definition_version: v2

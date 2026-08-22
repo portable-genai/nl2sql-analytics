@@ -1,0 +1,23 @@
+# Row-level and column-level access policies for the certified semantic layer (H1).
+#
+# These are DATA, applied by the deterministic SQL composer, never by a model. A row predicate is
+# injected into every query against the named dataset, so a caller can only ever see rows their
+# tenant partition owns; a column mask replaces a sensitive column's value with a constant in the
+# projected output. The composer FAILS CLOSED: a dataset with no row policy here is treated as
+# requiring the tenant predicate on its declared `tenant_column`, so forgetting to list a dataset
+# does not silently widen access. Removing the predicate injection is what a policy test goes red
+# on. Every value here is obviously fictional.
+
+# Row-level access: the predicate template injected into the WHERE clause. `{tenant_column}` is
+# substituted with the dataset's declared tenant column and the value is bound as a parameter
+# (`:tenant`), never interpolated, so it cannot carry SQL.
+row_access:
+  orders_daily:
+    tenant_scoped: true
+  customers:
+    tenant_scoped: true
+
+# Column masks: columns whose projected value is replaced with a constant mask token in the
+# output. The raw value never leaves the query engine. (None are masked in the shipped fixture;
+# the mechanism is exercised by tests injecting a mask, so the composer path is proven.)
+column_masks: {}
