@@ -178,7 +178,7 @@ Cloud Logging bucket in `infra/terraform/logging_worm.tf` instead.
 No literal secret material. `config/settings.yaml` and `.env.example` carry variable NAMES and
 non-secret defaults only; `.env.secrets.example` carries placeholders. Inbound and outbound
 credentials are deliberately distinct variables: `NL2SQL_S2S_TOKEN` authenticates a calling
-service INTO this one, while `HRZ7_S2S_TOKEN` and `HRZ7_S2S_SIGNING_KEY` are what this service
+service INTO this one, while `HUMAN_REVIEW_S2S_TOKEN` and `HUMAN_REVIEW_S2S_SIGNING_KEY` are what this service
 presents to the Hrz7 console. In a deployment they arrive as Secret Manager versions through
 Terraform's `additional_secret_env`, which refuses a moving `latest` version and refuses to
 shadow a name the stack sets itself.
