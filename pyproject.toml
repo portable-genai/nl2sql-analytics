@@ -44,6 +44,7 @@ gcp = [
   # profile. Found by the lint-gcp job, the first check able to see these imports.
   "google-cloud-bigquery>=3.0",
   "google-cloud-discoveryengine>=0.0",
+  "google-genai>=2.0",
 ]
 
 [project.scripts]
