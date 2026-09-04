@@ -123,7 +123,9 @@ def test_the_offline_outbox_flushes_the_payload_the_managed_router_would_submit(
 
 
 def test_the_payload_that_reaches_the_wire_is_redacted_whichever_family_built_it() -> None:
-    """Hrz7 is a shared sink, so this holds for every family, not only the one under demo."""
+    """human-review-console is a shared sink, so this holds for every family, not only the one under
+    demo.
+    """
     # A contrived answer carrying a raw identifier in the fields the review payload is built from,
     # so the shared converter's redaction has something to remove.
     planted = sample_cases.PLANTED_NRIC

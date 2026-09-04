@@ -31,7 +31,7 @@ untested.
   schema for certification, and a hash-chained audit log. This is the dev, test and CI default,
   and the working proof that the domain runs entirely off-cloud.
 - **`gcp`**: the managed stack (Gemini, BigQuery, Vertex AI Search for the data dictionary, the
-  Hrz1 guardrail gateway, Cloud Logging, Cloud Trace, IAP identity), each importing its SDK
+  `agent-guardrail-gateway`, Cloud Logging, Cloud Trace, IAP identity), each importing its SDK
   LAZILY inside the method so the other two profiles import the module tree with no cloud SDK
   installed. Be clear about its state: these adapters are still placeholders that raise, listed
   in `managed_readiness.py`, and the API process refuses to start on this profile while any
@@ -98,10 +98,10 @@ second region is a tfvars change, not a fork.
 ## What is honestly NOT portable, or not proven?
 
 - The managed profile's live behaviour is unproven, because the `gcp` adapters are placeholders.
-  Every claim about Gemini, BigQuery or the Hrz1 gateway in this repo is a claim about a declared
+  Every claim about Gemini, BigQuery or the `agent-guardrail-gateway` in this repo is a claim about a declared
   seam, not about a call anyone has made.
 - Tamper evidence is scoped to what the local sink can prove. Production tamper evidence is the
-  managed WORM sink's job (Hrz5, or the locked Cloud Logging bucket), reached through the `gcp`
+  managed WORM sink's job (`agent-observability`, or the locked Cloud Logging bucket), reached through the `gcp`
   audit adapter.
 - The `channel` port (delivery of a finished answer to a conversational surface) is bound in all
   three profiles but is exercised only by the demo today; the API, CLI and agent paths return the

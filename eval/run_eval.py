@@ -5,9 +5,8 @@ Two named layers via ``--mode`` (the scaffold is ``agent_eval_kit.eval_main``):
 
 * **smoke** (default) - the offline pre-merge check CI runs on every change: it drives the real
   ``AnalystService`` against a golden set with SDK-free local adapters and scores the h1-nl2sql
-  metric bundle.
-* **gate** - the promotion verdict from the shared Hrz4 authority (requires the ``gcp`` profile),
-  via ``agent_eval_kit.PromotionGateClient``.
+  metric bundle. * **gate** - the promotion verdict from the shared model-quality-gate authority
+  (requires the ``gcp`` profile), via ``agent_eval_kit.PromotionGateClient``.
 
 Every metric scores the pipeline against the DATASET'S OWN ``expected_*`` fields, an independent
 golden oracle, never against the pipeline's own answer. The pure scorers below are reused by
@@ -47,7 +46,8 @@ THRESHOLDS: dict[str, float] = {
     "review_safety": 0.99,
     "pii_safety": 0.99,
 }
-#: The registered Hrz4 metric bundle for this vertical (Hrz4 owns the metrics + thresholds).
+#: The registered model-quality-gate metric bundle for this vertical (model-quality-gate owns the
+#: metrics + thresholds).
 _BUNDLE = "nl2sql-analytics"
 
 
@@ -194,6 +194,6 @@ if __name__ == "__main__":
             smoke=run_smoke,
             gate=run_gate,
             default_dataset=DEFAULT_DATASET,
-            description="Offline / Hrz4 evaluation gate for H1.",
+            description="Offline / model-quality-gate for H1.",
         )
     )

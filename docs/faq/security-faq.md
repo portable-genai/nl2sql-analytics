@@ -66,7 +66,7 @@ two independent gates and both fail closed:
    `certified` or `conditionally_certified` AND a dataset whose `certified_metrics` list contains
    this metric proceeds. An unreachable certification source resolves to `UNKNOWN`, which
    refuses. A `conditionally_certified` backing answers with a caveat, sets
-   `requires_human_review` and is ROUTED to Hrz7 in the same call.
+   `requires_human_review` and is ROUTED to `human-review-console` in the same call.
 
 A refusal is a first-class outcome, not an error: it is audited, it carries a
 `policy:semantic-layer` citation, and it is scored by the `refusal_completeness` eval metric at a
@@ -102,14 +102,14 @@ What the screen actually is depends on the profile, and only one of the three is
 - `local`: `LocalGuardrailAdapter` matches the question against the `INJECTION_MARKERS` corpus in
   `adapters/local/_fixtures.py`. It is a working screen, deliberately not a no-op, so the demo and
   the gate can prove the block path.
-- `gcp`: `CloudGuardrailAdapter` is the declared seam to Hrz1, the Agent Guardrail Gateway. It
+- `gcp`: `CloudGuardrailAdapter` is the declared seam to `agent-guardrail-gateway`, the Agent Guardrail Gateway. It
   performs its lazy `google.auth` import and then raises: the gateway call is not implemented.
   It is listed in `managed_readiness.py`, so the API refuses to start on this profile at all.
 - `onprem`: raises `NotImplementedError` naming the client gateway to bind.
 
-Hrz1 owns the injection corpus, the classifier and the output filter in every case. This repo owns
+`agent-guardrail-gateway` owns the injection corpus, the classifier and the output filter in every case. This repo owns
 only where the call sits (before generation) and the rule that an unreachable screen refuses.
-Rule R1 in [`../../COMPLIANCE.md`](../../COMPLIANCE.md) is the standing statement that the Hrz1
+Rule R1 in [`../../COMPLIANCE.md`](../../COMPLIANCE.md) is the standing statement that the `agent-guardrail-gateway`
 binding is still outstanding.
 
 ## What reaches the model, and what reaches an outbound sink?
@@ -117,7 +117,7 @@ binding is still outstanding.
 `redact(question.text, PII_PATTERNS)` runs first, before the screen, before the dictionary lookup
 and before `propose_intent`. The narration call receives only the metric title, the dimension
 names, the result columns and rows, the row count and the deterministic caveats, never the
-question, the SQL or the verdict. The audit write redacts again. The Hrz7 review payload is
+question, the SQL or the verdict. The audit write redacts again. The `human-review-console` review payload is
 redacted in `adapters/_review_payload.py` against EVERY jurisdiction's rows, not just this
 deployment's, because the console is a shared sink. The trace span carries structural attributes
 only (action, actor, tenant), never content.
@@ -179,7 +179,7 @@ No literal secret material. `config/settings.yaml` and `.env.example` carry vari
 non-secret defaults only; `.env.secrets.example` carries placeholders. Inbound and outbound
 credentials are deliberately distinct variables: `NL2SQL_S2S_TOKEN` authenticates a calling
 service INTO this one, while `HUMAN_REVIEW_S2S_TOKEN` and `HUMAN_REVIEW_S2S_SIGNING_KEY` are what this service
-presents to the Hrz7 console. In a deployment they arrive as Secret Manager versions through
+presents to the `human-review-console`. In a deployment they arrive as Secret Manager versions through
 Terraform's `additional_secret_env`, which refuses a moving `latest` version and refuses to
 shadow a name the stack sets itself.
 
@@ -194,15 +194,15 @@ hard failures. `tests/unit/test_repo_artifacts.py` asserts each of these from in
 
 ## What is explicitly out of scope, or not built yet?
 
-Out of scope by design, because a sibling system owns it: the guardrail engine (Hrz1), the agent
-registry (Hrz3), the promotion gate (Hrz4), the shared trace and WORM audit sink (Hrz5), the
-human-review console (Hrz7), and dataset certification (H4). This repo integrates each through a
+Out of scope by design, because a sibling system owns it: the guardrail engine (`agent-guardrail-gateway`), the agent
+registry (`agent-registry`), the promotion gate (`model-quality-gate`), the shared trace and WORM audit sink (`agent-observability`), the
+human-review console (`human-review-console`), and dataset certification (H4). This repo integrates each through a
 port rather than re-implementing it; see [features-faq.md](features-faq.md).
 
 Not built yet, and tracked as such rather than implied:
 
 - the managed adapter family is placeholders. Every `gcp` method performs its lazy import and
-  raises, so the Hrz1 screen, the Gemini calls, the BigQuery execution and the H4 call are all
+  raises, so the `agent-guardrail-gateway` screen, the Gemini calls, the BigQuery execution and the H4 call are all
   unimplemented. `managed_readiness.py` lists them, the API preflight refuses to start on a
   managed profile while any is active, and `infra/terraform/managed_readiness.tf` fails
   `terraform plan` when `production_edge_enabled` is true;
