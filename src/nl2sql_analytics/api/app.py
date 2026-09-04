@@ -291,7 +291,8 @@ def ask(
 
     The row-level scope comes from the principal's tenant, never the request body, so a caller
     cannot widen its own access. Rule R8: an answer that sets ``requires_human_review`` (a
-    conditionally certified backing dataset, or an empty result) is ROUTED to the Hrz7 console
+    conditionally certified backing dataset, or an empty result) is ROUTED to the
+    human-review-console
     here, in the same request that produced it. Setting the flag is not the escalation; routing is.
     """
     container = _container()

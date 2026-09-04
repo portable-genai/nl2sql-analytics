@@ -51,7 +51,7 @@ caller-supplied value (the tenant, each filter value) is a bound parameter and n
   `certified` or `conditionally_certified` AND a dataset that lists this metric proceeds;
   anything else, including an unreachable certification source (which resolves to `UNKNOWN`),
   refuses. A `conditionally_certified` backing answers with a caveat, sets
-  `requires_human_review` and is routed to Hrz7 in the same call.
+  `requires_human_review` and is routed to `human-review-console` in the same call.
 - **The composed SQL is validated before it can execute.** `validate_sql` runs inside
   `compile()`, on the composed text, and raises `UnsafeQueryError` unless the query is a single
   statement with no `;`, carries no SQL comment, starts with `SELECT`, contains none of
@@ -82,11 +82,11 @@ caller-supplied value (the tenant, each filter value) is a bound parameter and n
 | Profile | Model adapter (`llm`) | Guardrail adapter | Behaviour |
 |---|---|---|---|
 | `local` | `adapters/local/llm.py` (`LocalAnalystLlm`) | `adapters/local/guardrail.py` (`LocalGuardrailAdapter`) | Deterministic and SDK-free. The proposal comes from dictionary hints plus keyword matching over `METRIC_SYNONYMS` / `DIMENSION_WORDS`, and falls back to a metric name the layer will not certify so an unrecognised question REFUSES. The narration is assembled from the facts. The screen is a real screen over the `INJECTION_MARKERS` corpus, not a no-op. Both outputs still pass through the same schema and groundedness checks a real model's would. |
-| `gcp` | `adapters/gcp/llm.py` (`CloudAnalystLlm`) | `adapters/gcp/guardrail.py` (`CloudGuardrailAdapter`) | Placeholders. Each method performs its lazy SDK import (`google.generativeai`, `google.auth`) and then raises: the Gemini call and the Hrz1 gateway call are not implemented. Both `llm` methods and `guardrail.screen` are listed in `managed_readiness.py`, so the API process preflight refuses to start on this profile and `infra/terraform/managed_readiness.tf` fails `terraform plan` when `production_edge_enabled` is true. |
+| `gcp` | `adapters/gcp/llm.py` (`CloudAnalystLlm`) | `adapters/gcp/guardrail.py` (`CloudGuardrailAdapter`) | Placeholders. Each method performs its lazy SDK import (`google.generativeai`, `google.auth`) and then raises: the Gemini call and the `agent-guardrail-gateway` call are not implemented. Both `llm` methods and `guardrail.screen` are listed in `managed_readiness.py`, so the API process preflight refuses to start on this profile and `infra/terraform/managed_readiness.tf` fails `terraform plan` when `production_edge_enabled` is true. |
 | `onprem` | `adapters/onprem/llm.py` (`OnPremAnalystLlm`) | `adapters/onprem/guardrail.py` (`OnPremGuardrailAdapter`) | Fail-fast portability placeholders that raise `NotImplementedError` naming the client component to bind (P-12). They satisfy the Protocols so the exit seam is real rather than decorative. |
 
 So the honest reading of the guardrail port today: it is a REAL screen only under `local`. Under
-`gcp` it is the declared seam to Hrz1 and nothing more, and under `onprem` it refuses. Hrz1 owns
+`gcp` it is the declared seam to `agent-guardrail-gateway` and nothing more, and under `onprem` it refuses. `agent-guardrail-gateway` owns
 the injection corpus, the classifier and the output filter in every case; this repo owns only the
 placement of the call (before generation) and the rule that an unreachable screen refuses.
 
@@ -97,7 +97,7 @@ placement of the call (before generation) and the rule that an unreachable scree
   Record them here when `CloudAnalystLlm` performs the real Gemini call, and remove the two `llm`
   entries from `INCOMPLETE_MANAGED_OPERATIONS` only when an integration test proves the response
   mapping.
-- **Bind the guardrail to Hrz1 for real** (rule R1). Until `CloudGuardrailAdapter.screen` calls
+- **Bind the guardrail to `agent-guardrail-gateway` for real** (rule R1). Until `CloudGuardrailAdapter.screen` calls
   the gateway, injection defence and output filtering exist offline only.
 - **Redact what the narrator sees, and apply the column masks** (P-04). `narrate` receives the
   result ROWS as they came back from the query engine. Aggregate figures over a certified dataset
@@ -114,8 +114,8 @@ placement of the call (before generation) and the rule that an unreachable scree
   a query timeout and a documented switch that forces refusal rather than generation.
 - **Evaluate the live model** (P-08, rule R5). The offline eval scores the deterministic local
   stub against the golden oracle in `eval/datasets/golden_cases.jsonl`. Add a managed-profile run
-  through the Hrz4 promotion gate that scores real intent accuracy, refusal completeness and
-  narration groundedness against the same golden cases, and register the bundle with Hrz4.
+  through the `model-quality-gate` promotion gate that scores real intent accuracy, refusal completeness and
+  narration groundedness against the same golden cases, and register the bundle with `model-quality-gate`.
 
 Until these are complete the system is safe to run offline (deterministic engines plus the local
 stub model) and the managed model path is not production-cleared. Both the process preflight and

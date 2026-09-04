@@ -1,6 +1,6 @@
-"""GCP GuardrailPort: screen through the Hrz1 remote guardrail (lazy SDK import).
+"""GCP GuardrailPort: screen through the agent-guardrail-gateway remote guardrail (lazy SDK import).
 
-Calls the Hrz1 guardrail gateway (platform family), authenticated as a trusted service; the
+Calls the agent-guardrail-gateway (platform family), authenticated as a trusted service; the
 ``google.auth`` import (for the service ID token) lives inside the method so the offline profiles
 import this module with no GCP SDK installed. An unreachable screen refuses in the orchestrator.
 """
@@ -12,7 +12,7 @@ from ...domain.models import ScreenResult
 
 
 class CloudGuardrailAdapter:
-    """Screen a question through the Hrz1 remote guardrail."""
+    """Screen a question through the agent-guardrail-gateway remote guardrail."""
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -22,4 +22,4 @@ class CloudGuardrailAdapter:
 
         credentials, _ = google.auth.default()
         _ = (credentials, text)
-        raise RuntimeError("the Hrz1 guardrail is unreachable from the offline profile")
+        raise RuntimeError("the agent-guardrail-gateway is unreachable from the offline profile")

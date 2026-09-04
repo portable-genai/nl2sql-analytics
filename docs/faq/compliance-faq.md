@@ -24,7 +24,7 @@ schedule and legal basis for the audit trail this service writes.
 Minimised at every boundary rather than once. `domain/analyst_service.py` redacts the question
 with the shared `pii-kit` BEFORE the guardrail screen, before the dictionary lookup and before
 the model call, and redacts again before the audit write, so no raw identifier reaches a WORM
-record. `adapters/_review_payload.py` redacts before the Hrz7 payload leaves the process, against
+record. `adapters/_review_payload.py` redacts before the `human-review-console` payload leaves the process, against
 EVERY jurisdiction's patterns rather than only this deployment's, because the console is a shared
 sink. Trace spans carry structural attributes only (action, actor, tenant), never content.
 
@@ -97,9 +97,9 @@ change and scores the real pipeline against the golden set's OWN `expected_*` fi
 independent oracle, never against the pipeline's own answer: `resolver_accuracy` (0.90),
 `refusal_completeness` (1.00), `sql_correctness` (0.90), `citation_accuracy` (0.99),
 `answer_groundedness` (0.99), `review_safety` (0.99), `pii_safety` (0.99). `--mode gate`
-delegates the promotion verdict to Hrz4, the AI Quality and Model-Risk Platform, and refuses to
+delegates the promotion verdict to `model-quality-gate`, the AI Quality and Model-Risk Platform, and refuses to
 run off the managed profile, because a promotion certified by a laptop is certified by nothing.
-Registering this repo's bundle and thresholds with Hrz4 is still outstanding.
+Registering this repo's bundle and thresholds with `model-quality-gate` is still outstanding.
 
 ## Is every answer explainable?
 
@@ -117,11 +117,10 @@ produces the same SQL, the same figures and the same verdict.
 Read `COMPLIANCE.md` for the authoritative list; the ones a compliance reviewer usually asks
 about first are:
 
-- the managed adapter family is placeholders, so the Hrz1 guardrail binding (R1), the Hrz5
-  observability binding (R2), the Hrz3 registration (R4) and the Hrz4 bundle registration (R5)
+- the managed adapter family is placeholders, so the `agent-guardrail-gateway` binding (R1), the `agent-observability` binding (R2), the `agent-registry` registration (R4) and the `model-quality-gate` bundle registration (R5)
   are all declared seams rather than live integrations;
 - resilience (P-10): timeouts, a circuit breaker, a documented kill switch and the CPS 230
   recovery objectives in the runbook;
 - cost and latency control (P-11): a token budget, small-model-first routing and a cache;
 - object-level authorisation below the tenant partition, and the column masks noted above;
-- an Rsk3 intake validation reference (R6), which is an intake action rather than a code control.
+- an `architecture-validator` intake validation reference (R6), which is an intake action rather than a code control.

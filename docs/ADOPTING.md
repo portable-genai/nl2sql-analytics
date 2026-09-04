@@ -151,7 +151,7 @@ the human decisions below.
    `eval/run_eval.py` for your metric catalogue: a fork inherits a green gate that measures the
    WRONG semantic layer until you do. The gate structure and the strict
    `refusal_completeness = 1.00` and `pii_safety >= 0.99` bars are generic; the golden cases are
-   yours. Register your bundle with Hrz4, which owns the promotion verdict.
+   yours. Register your bundle with `model-quality-gate`, which owns the promotion verdict.
 7. **Deployment posture.** Review the Dockerfile (digest-pinned base, non-root uid 10001,
    healthcheck on `/healthz`), `infra/terraform/` (region allowlist, Org Policy, CMEK, dry-run
    VPC-SC, locked WORM logging) and the loopback-by-default API binding before you expose
@@ -167,28 +167,27 @@ owned by sibling systems, and you should integrate rather than rebuild them. The
 family is where each integration lands; see [`faq/features-faq.md`](faq/features-faq.md) for the
 full boundary map and [`../COMPLIANCE.md`](../COMPLIANCE.md) for the per-rule status.
 
-- **Hrz1** Agent Guardrail Gateway: **this repo binds a `GuardrailPort`**, which most of its
+- `agent-guardrail-gateway` Agent Guardrail Gateway: **this repo binds a `GuardrailPort`**, which most of its
   siblings do not. That port is a client, not an engine: `ports/guardrail.py` screens every
-  question before generation, and `adapters/gcp/guardrail.py` is the seam that calls the Hrz1
-  gateway as a trusted service. Hrz1 owns the injection corpus, the classifier and the output
+  question before generation, and `adapters/gcp/guardrail.py` is the seam that calls the `agent-guardrail-gateway` as a trusted service. `agent-guardrail-gateway` owns the injection corpus, the classifier and the output
   filter; this repo owns only the decision that an unreachable screen REFUSES. Do not grow your
   own screening engine behind that port.
-- **Hrz3** Agent Registry and Governance: the agent publishes an A2A card at
+- `agent-registry` and Governance: the agent publishes an A2A card at
   `/.well-known/agent-card.json` built from the same tool table the runtime binds. Register the
-  card with Hrz3 and take the agent's identity and entitlements from it.
-- **Hrz4** AI Quality and Model-Risk Platform: owns the promotion verdict.
+  card with `agent-registry` and take the agent's identity and entitlements from it.
+- `model-quality-gate` AI Quality and Model-Risk Platform: owns the promotion verdict.
   `eval/run_eval.py --mode gate` is the client half and refuses to run off the managed profile;
   `--mode smoke` is the offline pre-merge check.
-- **Hrz5** Agent Observability, Audit and FinOps: the shared trace and immutable-audit sink. The
+- `agent-observability` Agent Observability, Audit and FinOps: the shared trace and immutable-audit sink. The
   `tracer` port emits one structural span per answered question, and the managed audit adapter
   writes to the locked Cloud Logging bucket.
-- **Hrz7** Case, Workflow and Human-Review Platform: every `requires_human_review` answer is
+- `human-review-console` Case, Workflow and Human-Review Platform: every `requires_human_review` answer is
   routed there over the shared `review-kit` in the same call that produced it (rule R8). You
   wire your endpoint; you do not re-implement the console.
 - **H4** Data-Quality and PII-Governance Agent: owns dataset certification. H1 consumes its
   verdict as DATA through the `certification` port and never imports it.
 
-**Hrz2** (the governed knowledge base) is deliberately NOT integrated: this service grounds its
+`enterprise-knowledge-base` (the governed knowledge base) is deliberately NOT integrated: this service grounds its
 answers in a certified semantic layer and an executed query, not in retrieved documents, so there
 is no RAG surface to place behind a knowledge-base port. The `dictionary` port is retrieval that
 authorises nothing, which is why it is not a knowledge base.
@@ -204,7 +203,7 @@ authorises nothing, which is why it is not a knowledge base.
 - [ ] Set your own `row_cap` per dataset, confirmed every dataset's `tenant_scoped` value, and
       added the query timeout, bytes ceiling and rate limit this repo leaves to the deployment.
 - [ ] Replaced the offline warehouse, the dictionary synonyms and every other fixture.
-- [ ] Rebuilt the eval golden set and thresholds, and registered the bundle with Hrz4.
+- [ ] Rebuilt the eval golden set and thresholds, and registered the bundle with `model-quality-gate`.
 - [ ] Implemented the `gcp` adapters listed in `managed_readiness.py` and removed them from that
       tuple, so a managed deploy stops being refused at preflight and at plan time.
 - [ ] Reviewed the deploy posture (Dockerfile, Terraform, bind address).

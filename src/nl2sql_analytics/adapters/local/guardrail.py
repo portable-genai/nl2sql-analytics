@@ -1,9 +1,9 @@
 """Local GuardrailPort: a deterministic screen over a fixture prompt-injection corpus.
 
-Offline stand-in for the Hrz1 remote guardrail. It is not a no-op: it blocks any question that
-carries a known prompt-injection or policy-violation marker, so the offline gate can prove the
-injection corpus never reaches the generation port. A real, working screen offline is what makes
-"screen unavailable fails closed" a meaningful claim rather than an untested branch.
+Offline stand-in for the agent-guardrail-gateway remote guardrail. It is not a no-op: it blocks any
+question that carries a known prompt-injection or policy-violation marker, so the offline gate can
+prove the injection corpus never reaches the generation port. A real, working screen offline is what
+makes "screen unavailable fails closed" a meaningful claim rather than an untested branch.
 """
 
 from __future__ import annotations

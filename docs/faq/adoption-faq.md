@@ -93,7 +93,7 @@ dataset's OWN `expected_*` fields, an independent oracle, never against the pipe
 a fork inherits a green gate that measures the WRONG semantic layer until the cases are yours. The
 metric bundle and its thresholds in `eval/run_eval.py` (`refusal_completeness` at 1.00,
 `citation_accuracy`, `answer_groundedness` and `pii_safety` at 0.99) are generic and worth
-keeping; register your bundle with Hrz4, which owns the promotion verdict.
+keeping; register your bundle with `model-quality-gate`, which owns the promotion verdict.
 
 ## Can I deploy the fork straight away?
 

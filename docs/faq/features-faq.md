@@ -91,12 +91,12 @@ anchor, and the offline demo and eval. It integrates the rest through ports:
 
 | Concern | Owner | How this repo reaches it |
 |---|---|---|
-| Prompt-injection screening, output filtering | **Hrz1** Agent Guardrail Gateway | `ports/guardrail.py`, screened before generation. This repo owns only the placement and the fail-closed rule. |
-| Governed RAG over a document corpus | **Hrz2** Enterprise Knowledge Base | Not integrated, by design: this service grounds in a certified layer and an executed query, not in retrieved documents. |
-| Agent discovery, identity and entitlements | **Hrz3** Agent Registry and Governance | The A2A card at `/.well-known/agent-card.json`; registration is outstanding. |
-| The promotion verdict for a model or agent | **Hrz4** AI Quality and Model-Risk Platform | `eval/run_eval.py --mode gate`, which refuses to run off the managed profile. `--mode smoke` is the offline pre-merge check. |
-| Shared traces, immutable audit, spend | **Hrz5** Agent Observability, Audit and FinOps | The `tracer` port (one structural span per answered question) and the managed audit adapter. |
-| The maker-checker console and case queue | **Hrz7** Case, Workflow and Human-Review Platform | `ports/review_router.py` over the shared `review-kit` (rule R8). |
+| Prompt-injection screening, output filtering | `agent-guardrail-gateway` Agent Guardrail Gateway | `ports/guardrail.py`, screened before generation. This repo owns only the placement and the fail-closed rule. |
+| Governed RAG over a document corpus | `enterprise-knowledge-base` | Not integrated, by design: this service grounds in a certified layer and an executed query, not in retrieved documents. |
+| Agent discovery, identity and entitlements | `agent-registry` and Governance | The A2A card at `/.well-known/agent-card.json`; registration is outstanding. |
+| The promotion verdict for a model or agent | `model-quality-gate` AI Quality and Model-Risk Platform | `eval/run_eval.py --mode gate`, which refuses to run off the managed profile. `--mode smoke` is the offline pre-merge check. |
+| Shared traces, immutable audit, spend | `agent-observability` Agent Observability, Audit and FinOps | The `tracer` port (one structural span per answered question) and the managed audit adapter. |
+| The maker-checker console and case queue | `human-review-console` Case, Workflow and Human-Review Platform | `ports/review_router.py` over the shared `review-kit` (rule R8). |
 | Dataset certification and data-quality scorecards | **H4** Data-Quality and PII-Governance Agent | `ports/certification.py`. H4's verdict crosses as DATA; H1 never imports H4. |
 
 The `dictionary` port is retrieval that authorises nothing, which is why it is not a knowledge
@@ -106,7 +106,7 @@ layer does not certify.
 ## What is not built yet?
 
 The managed adapter family. Every `gcp` adapter performs its lazy SDK import and then raises, so
-Gemini, BigQuery, the data-dictionary index, the Hrz1 gateway and the H4 call are declared seams
+Gemini, BigQuery, the data-dictionary index, the `agent-guardrail-gateway` and the H4 call are declared seams
 rather than working integrations. `managed_readiness.py` lists them, the API process preflight
 refuses to start on a managed profile while any is active, and
 `infra/terraform/managed_readiness.tf` fails `terraform plan` when `production_edge_enabled` is
