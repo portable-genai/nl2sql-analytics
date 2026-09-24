@@ -67,6 +67,7 @@ from hex_service_kit.web import (
     make_require_service_caller,
 )
 
+from ..adapters.controls import RecordingReviewRouter
 from ..assembly import analyst_service
 from ..config import (
     LOCAL_PROFILE,
@@ -300,12 +301,13 @@ def ask(
         Question(text=request.question, tenant=principal.tenant),
         actor=principal.actor,
     )
-    review_ref = ""
-    if answer.requires_human_review:
-        review_ref = container.review_router.route(
-            answer, maker=principal.actor, tenant=principal.tenant
-        )
-    return AskResponse.from_domain(answer, review_ref=review_ref)
+    # The hand-off never fails an already-answered, already-audited question; the response says
+    # what happened to it instead (the fleet's runtime-control contract).
+    routing = RecordingReviewRouter(container.review_router)
+    review_ref = routing.route(answer, maker=principal.actor, tenant=principal.tenant)
+    return AskResponse.from_domain(
+        answer, review_ref=review_ref, review_routing=routing.outcome.value
+    )
 
 
 @app.post("/v1/audit/ping", dependencies=[Depends(require_service_caller)], tags=["ops"])

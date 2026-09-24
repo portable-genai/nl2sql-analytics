@@ -105,9 +105,9 @@ layer does not certify.
 
 ## What is not built yet?
 
-The managed adapter family. Every `gcp` adapter performs its lazy SDK import and then raises, so
-Gemini, BigQuery, the data-dictionary index, the `agent-guardrail-gateway` and the H4 call are declared seams
-rather than working integrations. `managed_readiness.py` lists them, the API process preflight
+The managed adapter family. Every `gcp` adapter but the guardrail performs its lazy SDK import
+and then raises, so Gemini, BigQuery, the data-dictionary index and the H4 call are declared seams
+rather than working integrations; the guardrail calls Model Armor but has not run live yet. `managed_readiness.py` lists them, the API process preflight
 refuses to start on a managed profile while any is active, and
 `infra/terraform/managed_readiness.tf` fails `terraform plan` when `production_edge_enabled` is
 true. The `channel` port is bound in all three profiles but exercised only by the demo. Column

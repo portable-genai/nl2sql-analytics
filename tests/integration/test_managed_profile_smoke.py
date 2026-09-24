@@ -46,3 +46,23 @@ def test_an_escalation_reaches_the_live_hrz7_console() -> None:
         CANONICAL_RESULT, maker=sample_cases.ACTOR, tenant=sample_cases.TENANT
     )
     assert reference, "the console accepted the review but returned no id"
+
+
+_TEMPLATE_ENV = "NL2SQL_MODEL_ARMOR_TEMPLATE"
+
+
+@pytest.mark.skipif(
+    not (os.environ.get(_PROJECT_ENV) and os.environ.get(_TEMPLATE_ENV)),
+    reason=f"{_PROJECT_ENV} and {_TEMPLATE_ENV} are not both set",
+)
+def test_the_managed_guardrail_screens_through_the_live_model_armor_template() -> None:
+    """The response mapping against a real template: a plain question passes, an injection does
+    not. This is the live evidence ``managed_readiness.py`` asks for before the guardrail's entry
+    leaves ``INCOMPLETE_MANAGED_OPERATIONS``."""
+    guardrail = build_container(
+        _managed(
+            project_id=os.environ[_PROJECT_ENV], model_armor_template=os.environ[_TEMPLATE_ENV]
+        )
+    ).guardrail
+    assert guardrail.screen(sample_cases.CERTIFIED_QUESTION.text).allowed
+    assert not guardrail.screen(sample_cases.INJECTION_QUESTION.text).allowed

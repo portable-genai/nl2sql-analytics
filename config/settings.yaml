@@ -37,8 +37,9 @@ audit_anchor_path: ${NL2SQL_AUDIT_ANCHOR:-}
 # Google-signed OIDC token, from any project or any app, and reads its email as a principal.
 iap_audience: ${NL2SQL_IAP_AUDIENCE:-}
 
-# Rule R8: where an escalated result is routed for human review. The managed profile REFUSES to
-# swallow an escalation when this is empty, so a producer cannot ship with R8 unwired.
+# Rule R8: where an escalated result is routed for human review. With review routing on
+# (NL2SQL_REVIEW_ROUTING, default on) the managed profile REFUSES TO BOOT when this is empty, so a
+# producer cannot ship with R8 unwired.
 # The outbound S2S credentials are HUMAN_REVIEW_S2S_TOKEN / HUMAN_REVIEW_S2S_SIGNING_KEY (see .env.secrets.example),
 # deliberately distinct from this service's own inbound NL2SQL_S2S_TOKEN.
 review_url: ${HUMAN_REVIEW_URL:-}
@@ -48,6 +49,11 @@ review_url: ${HUMAN_REVIEW_URL:-}
 # refuses a partial block and `tests/test_settings_file.py` fails the build if this drifts from
 # `config.DEFAULT_BINDINGS`.
 project_id: ${GOOGLE_CLOUD_PROJECT:-}
+
+# The Model Armor template (in project_id and region) the managed guardrail screens every
+# question through. Unused offline. Under gcp with the guardrail on (NL2SQL_GUARDRAIL, default
+# on) an empty template REFUSES TO BOOT rather than building a malformed URL at the first screen.
+model_armor_template: ${NL2SQL_MODEL_ARMOR_TEMPLATE:-}
 
 adapters:
   audit:

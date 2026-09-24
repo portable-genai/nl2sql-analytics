@@ -56,6 +56,20 @@ from nl2sql_analytics.ports.identity import (
 
 from tests.conftest import is_blocked_sdk
 
+
+@pytest.fixture(autouse=True)
+def _managed_deployment_names_its_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A managed process with its controls on refuses to boot unconfigured.
+
+    These tests build the app under the managed profile to exercise identity, not routing or
+    screening, so they name a console and a Model Armor template the way any managed
+    deployment must.
+    """
+    monkeypatch.setenv("HUMAN_REVIEW_URL", "https://review.example.test")
+    monkeypatch.setenv("NL2SQL_MODEL_ARMOR_TEMPLATE", "nl2sql-guardrail")
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "fictional-agent-project")
+
+
 #: A configured audience: the IAP-protected resource, obviously fictional.
 AUDIENCE = "/projects/000000000000/global/backendServices/1111111111111111111"
 
@@ -404,6 +418,10 @@ def _port_block(port: str, cls: str) -> list[str]:
 _REBOUND_SETTINGS = "\n".join(
     [
         'audit_path: ":memory:"',
+        # The managed profile names its review console or refuses to boot, as a deployment must.
+        "review_url: ${HUMAN_REVIEW_URL:-}",
+        "project_id: ${GOOGLE_CLOUD_PROJECT:-}",
+        "model_armor_template: ${NL2SQL_MODEL_ARMOR_TEMPLATE:-}",
         "iap_audience: " + "${" + _AUDIENCE_ENV + ":-}",
         "adapters:",
         *_port_block("audit", "audit:LocalAuditAdapter"),

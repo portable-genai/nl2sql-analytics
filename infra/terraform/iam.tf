@@ -33,12 +33,14 @@ locals {
   # Every role below is traceable to a bound adapter or to the serving edge. aiplatform.user
   # covers a narration or classification model, which restates and classifies and never
   # produces a number or a verdict (the consequential decision is deterministic).
-  app_roles = [
+  app_roles = concat([
     "roles/logging.logWriter",            # audit.py (write only: it cannot read the WORM trail)
     "roles/cloudtrace.agent",             # tracer.py
     "roles/secretmanager.secretAccessor", # the inbound and outbound service credentials
     "roles/aiplatform.user",              # the narration surface a vertical binds
-  ]
+    # guardrail.py screens every question through Model Armor while the guardrail is on;
+    # switched off, nothing calls it and nothing is granted.
+  ], var.guardrail_enabled ? ["roles/modelarmor.user"] : [])
 }
 
 resource "google_project_iam_member" "app" {

@@ -48,8 +48,10 @@ route in the same call that produced the answer. `domain/analyst_service.py` set
 pure code, for a conditionally certified backing dataset or an empty result, and never by model
 output. `tests/unit/test_review_routing.py` asserts the ROUTING rather than the flag, because a
 local router that silently did nothing would let a producer ship R8 unwired and green; the
-offline router therefore enqueues to the review kit's outbox, the managed router REFUSES when no
-console is configured rather than swallowing the escalation, and the on-premises router raises.
+offline router therefore enqueues to the review kit's outbox, the managed profile REFUSES TO BOOT
+with routing on and no console configured, a hand-off that fails at request time is reported as
+`review_routing: "failed"` rather than swallowed, and the on-premises router raises.
+`NL2SQL_REVIEW_ROUTING=off` switches routing off, and every answer then says so.
 `CRITICAL` demands two approvals.
 
 ## How is data residency enforced, rather than described?

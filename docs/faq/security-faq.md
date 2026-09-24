@@ -102,9 +102,13 @@ What the screen actually is depends on the profile, and only one of the three is
 - `local`: `LocalGuardrailAdapter` matches the question against the `INJECTION_MARKERS` corpus in
   `adapters/local/_fixtures.py`. It is a working screen, deliberately not a no-op, so the demo and
   the gate can prove the block path.
-- `gcp`: `CloudGuardrailAdapter` is the declared seam to `agent-guardrail-gateway`, the Agent Guardrail Gateway. It
-  performs its lazy `google.auth` import and then raises: the gateway call is not implemented.
-  It is listed in `managed_readiness.py`, so the API refuses to start on this profile at all.
+- `gcp`: `CloudGuardrailAdapter` screens the question through Model Armor's regional
+  `:sanitizeUserPrompt` endpoint with the template named by `NL2SQL_MODEL_ARMOR_TEMPLATE`, and
+  blocks when Model Armor reports a match. With the guardrail on, an empty template or project
+  refuses at boot rather than building a malformed URL. It has not yet run against a live
+  template, so it stays listed in `managed_readiness.py` and the API refuses to start on this
+  profile at all. (It used to be a stub that always raised, which the orchestrator read as an
+  unavailable screen, so every question would have been refused.)
 - `onprem`: raises `NotImplementedError` naming the client gateway to bind.
 
 `agent-guardrail-gateway` owns the injection corpus, the classifier and the output filter in every case. This repo owns
@@ -202,8 +206,8 @@ port rather than re-implementing it; see [features-faq.md](features-faq.md).
 Not built yet, and tracked as such rather than implied:
 
 - the managed adapter family is placeholders. Every `gcp` method performs its lazy import and
-  raises, so the `agent-guardrail-gateway` screen, the Gemini calls, the BigQuery execution and the H4 call are all
-  unimplemented. `managed_readiness.py` lists them, the API preflight refuses to start on a
+  raises, so the Gemini calls, the BigQuery execution and the H4 call are all unimplemented,
+  and the Model Armor screen is implemented but not yet proven live. `managed_readiness.py` lists them, the API preflight refuses to start on a
   managed profile while any is active, and `infra/terraform/managed_readiness.tf` fails
   `terraform plan` when `production_edge_enabled` is true;
 - column masks are declared and not applied (above);

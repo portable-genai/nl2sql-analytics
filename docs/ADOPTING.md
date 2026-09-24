@@ -169,7 +169,7 @@ full boundary map and [`../COMPLIANCE.md`](../COMPLIANCE.md) for the per-rule st
 
 - `agent-guardrail-gateway` Agent Guardrail Gateway: **this repo binds a `GuardrailPort`**, which most of its
   siblings do not. That port is a client, not an engine: `ports/guardrail.py` screens every
-  question before generation, and `adapters/gcp/guardrail.py` is the seam that calls the `agent-guardrail-gateway` as a trusted service. `agent-guardrail-gateway` owns the injection corpus, the classifier and the output
+  question before generation, and `adapters/gcp/guardrail.py` calls Model Armor directly today (the `agent-guardrail-gateway` binding of rule R1 is still outstanding). `agent-guardrail-gateway` owns the injection corpus, the classifier and the output
   filter; this repo owns only the decision that an unreachable screen REFUSES. Do not grow your
   own screening engine behind that port.
 - `agent-registry` and Governance: the agent publishes an A2A card at

@@ -30,10 +30,11 @@ untested.
   real screen over an injection corpus for the guardrail, a fixture feed mirroring H4's response
   schema for certification, and a hash-chained audit log. This is the dev, test and CI default,
   and the working proof that the domain runs entirely off-cloud.
-- **`gcp`**: the managed stack (Gemini, BigQuery, Vertex AI Search for the data dictionary, the
-  `agent-guardrail-gateway`, Cloud Logging, Cloud Trace, IAP identity), each importing its SDK
+- **`gcp`**: the managed stack (Gemini, BigQuery, Vertex AI Search for the data dictionary, Model
+  Armor for the guardrail, Cloud Logging, Cloud Trace, IAP identity), each importing its SDK
   LAZILY inside the method so the other two profiles import the module tree with no cloud SDK
-  installed. Be clear about its state: these adapters are still placeholders that raise, listed
+  installed. Be clear about its state: apart from the Model Armor guardrail (implemented, not yet
+  run live), these adapters are still placeholders that raise; all of them are listed
   in `managed_readiness.py`, and the API process refuses to start on this profile while any
   listed operation is active.
 - **`onprem`**: fail-fast placeholders that satisfy the same Protocols and raise
