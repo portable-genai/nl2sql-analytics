@@ -102,8 +102,10 @@ def _adc_token_source() -> Callable[[], str]:  # pragma: no cover - live GCP
     def token() -> str:
         if not credentials.valid:
             credentials.refresh(request)
-        value: str = credentials.token
-        return value
+        value = credentials.token
+        if not value:
+            raise RuntimeError("Application Default Credentials produced no bearer token")
+        return str(value)
 
     return token
 
