@@ -19,6 +19,8 @@ INCOMPLETE_MANAGED_OPERATIONS: tuple[str, ...] = (
     "certification.CloudCertificationAdapter.dataset_status",
     "channel.CloudChannelAdapter.deliver",
     "dictionary.CloudDictionaryAdapter.lookup",
+    # Performs the real Model Armor call now (unit-tested over a fake client); it stays listed
+    # until tests/integration's live-template test has run green against a deployment.
     "guardrail.CloudGuardrailAdapter.screen",
     "llm.CloudAnalystLlm.narrate",
     "llm.CloudAnalystLlm.propose_intent",

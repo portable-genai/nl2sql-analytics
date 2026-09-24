@@ -45,6 +45,20 @@ from nl2sql_analytics.api.app import (
 from tests import REPO_ROOT
 from tests.conftest import reimport
 
+
+@pytest.fixture(autouse=True)
+def _managed_deployment_names_its_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A managed process with its controls on refuses to boot unconfigured.
+
+    These tests build the app under the managed profile to exercise identity, not routing or
+    screening, so they name a console and a Model Armor template the way any managed
+    deployment must.
+    """
+    monkeypatch.setenv("HUMAN_REVIEW_URL", "https://review.example.test")
+    monkeypatch.setenv("NL2SQL_MODEL_ARMOR_TEMPLATE", "nl2sql-guardrail")
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "fictional-agent-project")
+
+
 _PROFILE_ENV = "NL2SQL_PROFILE"
 _TOKEN_ENV = "NL2SQL_S2S_TOKEN"
 _INSECURE_DEMO_ENV = "NL2SQL_ALLOW_INSECURE_DEMO"

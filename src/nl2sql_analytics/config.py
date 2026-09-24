@@ -39,7 +39,9 @@ base URL, allowlist or path fails in the deploy instead of serving on a posture 
 
 from __future__ import annotations
 
+import functools
 import importlib
+import logging
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -51,7 +53,7 @@ import yaml
 from hex_service_kit.identity import IdentityPort
 from hex_service_kit.netdefaults import ConfiguredEmptyError, EnvSetting, read_env_setting
 
-from .envread import setting_or_default
+from .envread import boolean_setting, setting_or_default
 from .ports.audit import AuditSinkPort
 from .ports.certification import CertificationPort
 from .ports.channel import ChannelPort
@@ -420,6 +422,37 @@ def _bindings_from(data: Mapping[str, Any]) -> dict[str, dict[str, str]]:
     return out
 
 
+#: The switches for the two cheap runtime controls this service has, read in three states: unset
+#: is ON (the reference posture keeps cheap controls on), a boolean value wins, and an emptied or
+#: unrecognised value refuses at boot. See the fleet's runtime-control contract.
+GUARDRAIL_ENV = "NL2SQL_GUARDRAIL"
+REVIEW_ROUTING_ENV = "NL2SQL_REVIEW_ROUTING"
+#: The Model Armor template the managed guardrail screens through, read by the settings file.
+MODEL_ARMOR_TEMPLATE_ENV = "NL2SQL_MODEL_ARMOR_TEMPLATE"
+
+_log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class ControlSwitches:
+    """Which cheap runtime controls this process runs. Every one defaults on."""
+
+    guardrail: bool = True
+    review_routing: bool = True
+
+    @classmethod
+    def from_env(cls) -> ControlSwitches:
+        return cls(
+            guardrail=boolean_setting(GUARDRAIL_ENV, default=True),
+            review_routing=boolean_setting(REVIEW_ROUTING_ENV, default=True),
+        )
+
+    def switched_off(self) -> tuple[str, ...]:
+        """The environment variables of every control that is off, for the startup warning."""
+        states = ((GUARDRAIL_ENV, self.guardrail), (REVIEW_ROUTING_ENV, self.review_routing))
+        return tuple(name for name, on in states if not on)
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     """Deployment settings, resolved from the settings file and the environment."""
@@ -435,6 +468,8 @@ class Settings:
     audit_anchor_path: str = ""
     #: Base URL of the human-review-console Human-Review console the R8 producer path submits to.
     review_url: str = ""
+    #: Which cheap runtime controls run; see :class:`ControlSwitches`.
+    controls: ControlSwitches = field(default_factory=ControlSwitches)
     #: The audience the managed IAP identity adapter verifies the signed assertion AGAINST: the
     #: IAP-protected resource, ``/projects/<NUM>/global/backendServices/<ID>`` behind an HTTPS
     #: load balancer. It is CONFIGURATION rather than a literal because it is per-deployment, and
@@ -450,6 +485,9 @@ class Settings:
     #: a trace resource path. Empty is valid: on Cloud Run the exporter resolves it
     #: from the metadata server.
     project_id: str = ""
+    #: The Model Armor template id (in ``project_id`` and ``region``) the managed guardrail
+    #: screens every question through. Unused offline.
+    model_armor_template: str = ""
     #: Was :attr:`profile` chosen DELIBERATELY, or merely inherited because nobody set the
     #: variable? Only :meth:`load` can set this False; direct construction names the profile in
     #: code and is deliberate by definition. The seeded-persona identity adapter refuses to
@@ -528,7 +566,7 @@ class Settings:
     def load(cls, path: Path | None = None) -> Settings:
         data = _read_settings_file(path)
         choice = resolve_profile()
-        return cls(
+        settings = cls(
             profile=choice.profile,
             profile_explicit=choice.explicit,
             region=str(data.get("region") or _REGION),
@@ -538,8 +576,47 @@ class Settings:
             iap_audience=str(data.get("iap_audience") or ""),
             tenant=str(data.get("tenant") or ""),
             project_id=str(data.get("project_id") or ""),
+            model_armor_template=str(data.get("model_armor_template") or ""),
             adapters=_bindings_from(data),
+            controls=ControlSwitches.from_env(),
         )
+        _refuse_unconfigured_controls(settings)
+        return settings
+
+
+def _refuse_unconfigured_controls(settings: Settings) -> None:
+    """A control that is on under the managed profile must be able to work, checked at boot.
+
+    The managed router used to discover a missing ``review_url`` on the first escalation and
+    fail that request, and a Model Armor guardrail with no template or project would build a
+    malformed URL on the first question, which the orchestrator reads as "screen unavailable"
+    and refuses. Both are configuration errors, so both refuse here with the two ways out.
+    """
+    if settings.profile not in _MANAGED_PROFILES:
+        return
+    if settings.controls.review_routing and not settings.review_url.strip():
+        raise ConfiguredEmptyError(
+            f"Review routing is on under profile {settings.profile!r} but HUMAN_REVIEW_URL "
+            f"(config/settings.yaml review_url) is not set. Name the human-review-console base "
+            f"URL, or set {REVIEW_ROUTING_ENV}=off to run without routing."
+        )
+    if settings.controls.guardrail and settings.adapters["guardrail"][settings.profile].endswith(
+        ":CloudGuardrailAdapter"
+    ):
+        missing = [
+            name
+            for name, value in (
+                (MODEL_ARMOR_TEMPLATE_ENV, settings.model_armor_template),
+                ("GOOGLE_CLOUD_PROJECT", settings.project_id),
+            )
+            if not value.strip()
+        ]
+        if missing:
+            raise ConfiguredEmptyError(
+                f"The guardrail is on under profile {settings.profile!r} but "
+                f"{' and '.join(missing)} (config/settings.yaml) is not set, so Model Armor "
+                f"has no template to screen through. Name it, or set {GUARDRAIL_ENV}=off."
+            )
 
 
 class Container:
@@ -569,6 +646,10 @@ class Container:
 
     @cached_property
     def review_router(self) -> ReviewRouterPort:
+        if not self.settings.controls.review_routing:
+            from .adapters.controls import DisabledReviewRouter
+
+            return DisabledReviewRouter(self.settings)
         adapter = self._bind("review_router")
         assert isinstance(adapter, ReviewRouterPort)
         return adapter
@@ -611,6 +692,10 @@ class Container:
 
     @cached_property
     def guardrail(self) -> GuardrailPort:
+        if not self.settings.controls.guardrail:
+            from .adapters.controls import DisabledGuardrail
+
+            return DisabledGuardrail(self.settings)
         adapter = self._bind("guardrail")
         assert isinstance(adapter, GuardrailPort)
         return adapter
@@ -622,8 +707,22 @@ class Container:
         return adapter
 
 
+@functools.cache
+def warn_switched_off(switched_off: tuple[str, ...]) -> None:
+    """Log a switched-off posture once per process, however many containers are built.
+
+    The agent tools build a container per tool call, so a warning in :func:`build_container`
+    itself would repeat on every call and drown the one line an operator needs to see.
+    """
+    _log.warning("runtime controls switched off: %s", ", ".join(switched_off))
+
+
 def build_container(settings: Settings | None = None) -> Container:
-    return Container(settings or Settings.load())
+    settings = settings or Settings.load()
+    switched_off = settings.controls.switched_off()
+    if switched_off:
+        warn_switched_off(switched_off)
+    return Container(settings)
 
 
 def identity_adapter_class(settings: Settings) -> type:

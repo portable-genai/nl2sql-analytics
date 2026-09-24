@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 from ..domain.models import AnalystAnswer
@@ -42,13 +44,21 @@ class AskResponse(BaseModel):
     caveats: list[str] = []
     requires_human_review: bool
     #: Where the escalation WENT (rule R8): the human-review-console review id, or the local queue
-    #: reference.
-    #: Empty only when the answer did not escalate.
+    #: reference. Empty exactly when ``review_routing`` is not ``routed``.
     review_ref: str = ""
+    #: What happened to the hand-off: routed, failed, off or not_required. ``failed`` means the
+    #: answer is NOT queued for review, and the console says so.
+    review_routing: Literal["routed", "failed", "off", "not_required"] = "not_required"
     citations: list[CitationModel] = []
 
     @classmethod
-    def from_domain(cls, answer: AnalystAnswer, *, review_ref: str = "") -> AskResponse:
+    def from_domain(
+        cls,
+        answer: AnalystAnswer,
+        *,
+        review_ref: str = "",
+        review_routing: str = "not_required",
+    ) -> AskResponse:
         refusal = answer.refusal
         return cls(
             question=answer.question,
@@ -66,6 +76,7 @@ class AskResponse(BaseModel):
             caveats=list(answer.caveats),
             requires_human_review=answer.requires_human_review,
             review_ref=review_ref,
+            review_routing=review_routing,  # type: ignore[arg-type]
             citations=[
                 CitationModel(source_id=c.source_id, title=c.title, snippet=c.snippet)
                 for c in answer.citations

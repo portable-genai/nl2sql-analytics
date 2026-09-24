@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 from hex_service_kit.serialization import to_jsonable
 from pii_kit import redact
 
+from ..adapters.controls import RecordingReviewRouter
 from ..assembly import analyst_service
 from ..config import Container, Settings, build_container
 from ..domain.models import Question
@@ -77,21 +78,22 @@ def ask_question(
 
     Returns:
       A JSON-safe answer dict with every string masked for personal data (P-04: a tool result
-      goes into a model's context), plus ``review_ref``: where an escalation WENT. It is empty
-      only when the answer did not escalate.
+      goes into a model's context), plus ``review_ref``: where an escalation WENT (empty unless
+      it was routed), and ``review_routing``: ``routed``, ``failed`` (NOT queued for review),
+      ``off`` or ``not_required``.
     """
     container = _container(settings)
     service = analyst_service(container)
     answer = service.answer(Question(text=question, tenant=tenant), actor=actor)
-    review_ref = ""
-    if answer.requires_human_review:
-        review_ref = container.review_router.route(answer, maker=actor, tenant=tenant)
+    routing = RecordingReviewRouter(container.review_router)
+    review_ref = routing.route(answer, maker=actor, tenant=tenant)
     payload = _redacted(to_jsonable(answer))
     if not isinstance(payload, dict):  # pragma: no cover - dataclasses serialise to objects
         raise TypeError("an answer must serialise to a JSON object")
     # Attached after the redaction pass: it is a routing reference, not narrative text, and
     # masking an identifier would break the caller's ability to look the review up.
     payload["review_ref"] = review_ref
+    payload["review_routing"] = routing.outcome.value
     return payload
 
 

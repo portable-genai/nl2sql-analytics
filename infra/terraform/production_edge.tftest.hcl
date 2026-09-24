@@ -158,6 +158,7 @@ run "serving_edge_contract" {
     project_id                  = "fictional-agent-project"
     enable_vpc_sc               = false
     production_edge_enabled     = true
+    model_armor_template        = "nl2sql-guardrail"
     api_image                   = "example-docker.pkg.dev/fictional-agent-project/agent/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     service_domain              = "agent.fictional-bank.example"
     human_review_url            = "https://review.fictional-bank.example"
@@ -296,6 +297,7 @@ run "reject_mutable_api_image" {
     project_id                  = "fictional-agent-project"
     enable_vpc_sc               = false
     production_edge_enabled     = true
+    model_armor_template        = "nl2sql-guardrail"
     api_image                   = "example-docker.pkg.dev/fictional-agent-project/agent/api:latest"
     service_domain              = "agent.fictional-bank.example"
     human_review_url            = "https://review.fictional-bank.example"
@@ -315,6 +317,7 @@ run "reject_edge_with_no_review_console" {
     project_id                  = "fictional-agent-project"
     enable_vpc_sc               = false
     production_edge_enabled     = true
+    model_armor_template        = "nl2sql-guardrail"
     api_image                   = "example-docker.pkg.dev/fictional-agent-project/agent/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     service_domain              = "agent.fictional-bank.example"
     human_review_url            = ""
@@ -327,6 +330,31 @@ run "reject_edge_with_no_review_console" {
   ]
 }
 
+run "edge_with_routing_stated_off_needs_no_console" {
+  command = plan
+
+  variables {
+    project_id                  = "fictional-agent-project"
+    enable_vpc_sc               = false
+    production_edge_enabled     = true
+    model_armor_template        = "nl2sql-guardrail"
+    api_image                   = "example-docker.pkg.dev/fictional-agent-project/agent/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    service_domain              = "agent.fictional-bank.example"
+    human_review_url            = ""
+    review_routing_enabled      = false
+    alert_notification_channels = ["projects/fictional-agent-project/notificationChannels/123"]
+  }
+
+  expect_failures = [
+    check.managed_profile_is_implemented_before_serving,
+  ]
+
+  assert {
+    condition     = one([for item in google_cloud_run_v2_service.api[0].template[0].containers[0].env : item.value if endswith(item.name, "_REVIEW_ROUTING")]) == "false"
+    error_message = "a deployment that switches routing off must tell the service so, not leave it to infer from a missing console"
+  }
+}
+
 run "reject_edge_with_no_alert_channel" {
   command = plan
 
@@ -334,6 +362,7 @@ run "reject_edge_with_no_alert_channel" {
     project_id                  = "fictional-agent-project"
     enable_vpc_sc               = false
     production_edge_enabled     = true
+    model_armor_template        = "nl2sql-guardrail"
     api_image                   = "example-docker.pkg.dev/fictional-agent-project/agent/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     service_domain              = "agent.fictional-bank.example"
     human_review_url            = "https://review.fictional-bank.example"
@@ -411,5 +440,94 @@ run "an_unlocked_stack_is_created_unlocked" {
   assert {
     condition     = !google_logging_project_bucket_config.worm_audit.locked
     error_message = "worm_locked = false must leave the bucket UNLOCKED and the stack destroyable."
+  }
+}
+
+run "edge_states_the_guardrail_and_its_template" {
+  command = plan
+
+  variables {
+    project_id                  = "fictional-agent-project"
+    enable_vpc_sc               = false
+    production_edge_enabled     = true
+    api_image                   = "example-docker.pkg.dev/fictional-agent-project/agent/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    service_domain              = "agent.fictional-bank.example"
+    alert_notification_channels = ["projects/fictional-agent-project/notificationChannels/123"]
+    human_review_url            = "https://review.fictional-bank.example"
+    model_armor_template        = "nl2sql-guardrail"
+  }
+
+  expect_failures = [
+    check.managed_profile_is_implemented_before_serving,
+  ]
+
+  assert {
+    condition     = one([for item in google_cloud_run_v2_service.api[0].template[0].containers[0].env : item.value if endswith(item.name, "_GUARDRAIL")]) == "true"
+    error_message = "the guardrail switch must be stated on the service, not inherited"
+  }
+
+  assert {
+    condition     = one([for item in google_cloud_run_v2_service.api[0].template[0].containers[0].env : item.value if endswith(item.name, "_MODEL_ARMOR_TEMPLATE")]) == "nl2sql-guardrail"
+    error_message = "a guardrail that is on must be told the template it screens through"
+  }
+
+  assert {
+    condition     = contains(keys(google_project_iam_member.app), "roles/modelarmor.user")
+    error_message = "a guardrail that is on must be allowed to call Model Armor"
+  }
+}
+
+run "reject_edge_with_guardrail_on_and_no_template" {
+  command = plan
+
+  variables {
+    project_id                  = "fictional-agent-project"
+    enable_vpc_sc               = false
+    production_edge_enabled     = true
+    api_image                   = "example-docker.pkg.dev/fictional-agent-project/agent/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    service_domain              = "agent.fictional-bank.example"
+    alert_notification_channels = ["projects/fictional-agent-project/notificationChannels/123"]
+    human_review_url            = "https://review.fictional-bank.example"
+    model_armor_template        = ""
+  }
+
+  expect_failures = [
+    var.model_armor_template,
+    check.managed_profile_is_implemented_before_serving,
+  ]
+}
+
+run "edge_with_the_guardrail_stated_off_needs_no_template" {
+  command = plan
+
+  variables {
+    project_id                  = "fictional-agent-project"
+    enable_vpc_sc               = false
+    production_edge_enabled     = true
+    api_image                   = "example-docker.pkg.dev/fictional-agent-project/agent/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    service_domain              = "agent.fictional-bank.example"
+    alert_notification_channels = ["projects/fictional-agent-project/notificationChannels/123"]
+    human_review_url            = "https://review.fictional-bank.example"
+    guardrail_enabled           = false
+    model_armor_template        = ""
+  }
+
+  expect_failures = [
+    check.managed_profile_is_implemented_before_serving,
+  ]
+
+  assert {
+    condition     = one([for item in google_cloud_run_v2_service.api[0].template[0].containers[0].env : item.value if endswith(item.name, "_GUARDRAIL")]) == "false"
+    error_message = "a deployment that switches the guardrail off must tell the service so"
+  }
+
+  assert {
+    condition     = length([for item in google_cloud_run_v2_service.api[0].template[0].containers[0].env : item.name if endswith(item.name, "_MODEL_ARMOR_TEMPLATE")]) == 0
+    error_message = "an unnamed template must be left off the service, never set empty"
+  }
+
+  assert {
+    condition     = !contains(keys(google_project_iam_member.app), "roles/modelarmor.user")
+    error_message = "a switched-off guardrail calls nothing, so nothing is granted for it"
   }
 }

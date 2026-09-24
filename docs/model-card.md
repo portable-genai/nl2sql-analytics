@@ -82,11 +82,14 @@ caller-supplied value (the tenant, each filter value) is a bound parameter and n
 | Profile | Model adapter (`llm`) | Guardrail adapter | Behaviour |
 |---|---|---|---|
 | `local` | `adapters/local/llm.py` (`LocalAnalystLlm`) | `adapters/local/guardrail.py` (`LocalGuardrailAdapter`) | Deterministic and SDK-free. The proposal comes from dictionary hints plus keyword matching over `METRIC_SYNONYMS` / `DIMENSION_WORDS`, and falls back to a metric name the layer will not certify so an unrecognised question REFUSES. The narration is assembled from the facts. The screen is a real screen over the `INJECTION_MARKERS` corpus, not a no-op. Both outputs still pass through the same schema and groundedness checks a real model's would. |
-| `gcp` | `adapters/gcp/llm.py` (`CloudAnalystLlm`) | `adapters/gcp/guardrail.py` (`CloudGuardrailAdapter`) | Placeholders. Each method performs its lazy SDK import (`google.generativeai`, `google.auth`) and then raises: the Gemini call and the `agent-guardrail-gateway` call are not implemented. Both `llm` methods and `guardrail.screen` are listed in `managed_readiness.py`, so the API process preflight refuses to start on this profile and `infra/terraform/managed_readiness.tf` fails `terraform plan` when `production_edge_enabled` is true. |
+| `gcp` | `adapters/gcp/llm.py` (`CloudAnalystLlm`) | `adapters/gcp/guardrail.py` (`CloudGuardrailAdapter`) | The model adapter is a placeholder: it performs its lazy SDK import and then raises, so the Gemini call is not implemented. The guardrail is a real Model Armor screen (`:sanitizeUserPrompt` on the regional endpoint, template `NL2SQL_MODEL_ARMOR_TEMPLATE`), unit-tested over a fake client; it has not yet been run against a live template. Both `llm` methods and `guardrail.screen` stay listed in `managed_readiness.py` (the guardrail until its live integration test runs green), so the API process preflight refuses to start on this profile and `infra/terraform/managed_readiness.tf` fails `terraform plan` when `production_edge_enabled` is true. |
 | `onprem` | `adapters/onprem/llm.py` (`OnPremAnalystLlm`) | `adapters/onprem/guardrail.py` (`OnPremGuardrailAdapter`) | Fail-fast portability placeholders that raise `NotImplementedError` naming the client component to bind (P-12). They satisfy the Protocols so the exit seam is real rather than decorative. |
 
-So the honest reading of the guardrail port today: it is a REAL screen only under `local`. Under
-`gcp` it is the declared seam to `agent-guardrail-gateway` and nothing more, and under `onprem` it refuses. `agent-guardrail-gateway` owns
+So the honest reading of the guardrail port today: it is a real screen under `local` and, not yet
+proven live, under `gcp` (Model Armor called directly), and under `onprem` it refuses.
+`NL2SQL_GUARDRAIL=off` switches it off out loud: the container binds an allow-all adapter whose
+reason is "guardrail off" and logs the posture at startup. Rule R1's `agent-guardrail-gateway`
+binding is still outstanding; `agent-guardrail-gateway` owns
 the injection corpus, the classifier and the output filter in every case; this repo owns only the
 placement of the call (before generation) and the rule that an unreachable screen refuses.
 
@@ -97,8 +100,9 @@ placement of the call (before generation) and the rule that an unreachable scree
   Record them here when `CloudAnalystLlm` performs the real Gemini call, and remove the two `llm`
   entries from `INCOMPLETE_MANAGED_OPERATIONS` only when an integration test proves the response
   mapping.
-- **Bind the guardrail to `agent-guardrail-gateway` for real** (rule R1). Until `CloudGuardrailAdapter.screen` calls
-  the gateway, injection defence and output filtering exist offline only.
+- **Bind the guardrail to `agent-guardrail-gateway` for real** (rule R1). `CloudGuardrailAdapter.screen`
+  calls Model Armor directly today, which screens the input; output filtering and the gateway's
+  own corpus and classifier are not yet in the path.
 - **Redact what the narrator sees, and apply the column masks** (P-04). `narrate` receives the
   result ROWS as they came back from the query engine. Aggregate figures over a certified dataset
   are the expected content, but `column_masks` declared in `config/semantic_layer/policies.yaml`

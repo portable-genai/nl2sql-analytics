@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from ..adapters.controls import RecordingReviewRouter
 from ..assembly import build_analyst
 from ..domain.models import Question
 
@@ -32,11 +33,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  sql: {answer.sql}")
         for citation in answer.citations:
             print(f"  cite: {citation.source_id} ({citation.snippet})")
-        if answer.requires_human_review:
-            # Rule R8 on the CLI path too: the same escalation, the same router. A surface that
-            # only printed the flag would be a second place for an escalation to stop.
-            ref = container.review_router.route(answer, maker=args.actor, tenant=args.tenant)
-            print(f"  routed to human review: {ref}")
+        # Rule R8 on the CLI path too: the same escalation, the same router. A surface that only
+        # printed the flag would be a second place for an escalation to stop.
+        routing = RecordingReviewRouter(container.review_router)
+        ref = routing.route(answer, maker=args.actor, tenant=args.tenant)
+        print(f"  human review hand-off : {routing.outcome.value} {ref}".rstrip())
         return 0
 
     return 2  # pragma: no cover - argparse requires a subcommand
