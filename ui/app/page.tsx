@@ -28,6 +28,16 @@ function reviewRoutingOf(body: string): string | undefined {
   }
 }
 
+// Questions the local profile answers against its fictional warehouse, one per outcome the service
+// can produce: a certified answer, a conditionally certified answer that escalates and is routed
+// for review, and a refusal naming the certified metrics to ask instead. The service exposes no
+// question list, so these are the eval set's own cases (eval/datasets/golden_cases.jsonl).
+const EXAMPLE_QUESTIONS = [
+  "What was total revenue by region?",
+  "How many active customers by segment?",
+  "Show me profit margin by region",
+];
+
 interface CardSummary {
   name?: string;
   description?: string;
@@ -36,8 +46,7 @@ interface CardSummary {
 
 export default function Home() {
   const [persona, setPersona] = useState(PERSONAS[0]);
-  const [subject, setSubject] = useState("Acme Holdings (FICTIONAL)");
-  const [text, setText] = useState("urgent data breach reported by the branch");
+  const [question, setQuestion] = useState(EXAMPLE_QUESTIONS[0]);
   const [result, setResult] = useState("");
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -62,10 +71,12 @@ export default function Home() {
     setBusy(true);
     setFailed(false);
     try {
-      const response = await fetch(API + "/v1/triage", {
+      // The question is the whole of `AskRequest`: the tenant that scopes the rows comes from the
+      // resolved principal, never from this body.
+      const response = await fetch(API + "/v1/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Dev-Persona": persona },
-        body: JSON.stringify({ subject, text }),
+        body: JSON.stringify({ question: question }),
       });
       const body = await response.text();
       setFailed(!response.ok);
@@ -83,7 +94,7 @@ export default function Home() {
       <h1>{card?.name ?? "Agent console"}</h1>
       <p className="sub">
         {card?.description ??
-          "Submit a case. The decision is deterministic, cited, and routed to a human reviewer when it escalates."}
+          "Ask a governed question. The SQL is composed from the certified semantic layer, the answer is cited, and an escalation is routed to a human reviewer."}
       </p>
 
       <form onSubmit={submit}>
@@ -102,17 +113,29 @@ export default function Home() {
         </fieldset>
 
         <fieldset>
-          <legend>The case</legend>
+          <legend>The question</legend>
           <label>
-            Subject
-            <input value={subject} onChange={(event) => setSubject(event.target.value)} />
+            Example question
+            <select
+              value={EXAMPLE_QUESTIONS.includes(question) ? question : ""}
+              onChange={(event) => setQuestion(event.target.value)}
+            >
+              <option value="" disabled>
+                Your own question
+              </option>
+              {EXAMPLE_QUESTIONS.map((example) => (
+                <option key={example} value={example}>
+                  {example}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
-            Description
-            <textarea value={text} onChange={(event) => setText(event.target.value)} />
+            Question
+            <textarea value={question} onChange={(event) => setQuestion(event.target.value)} />
           </label>
-          <button type="submit" disabled={busy}>
-            {busy ? "Working" : "Triage this case"}
+          <button type="submit" disabled={busy || !question.trim()}>
+            {busy ? "Working" : "Ask this question"}
           </button>
         </fieldset>
       </form>
