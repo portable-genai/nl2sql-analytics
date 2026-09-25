@@ -12,7 +12,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ...config import Settings
+from hex_service_kit import provenance
+
+from ...config import LOCAL_STUB_MODEL, Settings
 from ...domain.models import DictionaryEntry
 from ._fixtures import DIMENSION_WORDS, METRIC_SYNONYMS
 
@@ -34,6 +36,8 @@ class LocalAnalystLlm:
         for column in dimensions:
             if column not in ordered:
                 ordered.append(column)
+        # This stub is what answered, so the console's model pill names it (never a managed id).
+        provenance.note_model(LOCAL_STUB_MODEL)
         return {"metric_id": metric_id, "dimensions": ordered, "filters": [], "grain": ""}
 
     @staticmethod
@@ -52,4 +56,5 @@ class LocalAnalystLlm:
         body = " | ".join(parts) if parts else "no rows matched"
         caveats = facts.get("caveats") or []
         tail = f" Caveat: {caveats[0]}" if caveats else ""
+        provenance.note_model(LOCAL_STUB_MODEL)
         return f"{metric}: {body} ({row_count} row(s)).{tail}"
