@@ -104,7 +104,11 @@ What the screen actually is depends on the profile, and only one of the three is
   the gate can prove the block path.
 - `gcp`: `CloudGuardrailAdapter` screens the question through Model Armor's regional
   `:sanitizeUserPrompt` endpoint with the template named by `NL2SQL_MODEL_ARMOR_TEMPLATE`, and
-  blocks when Model Armor reports a match. With the guardrail on, an empty template or project
+  fails closed: it allows a question only when Model Armor reports `NO_MATCH_FOUND` with
+  `invocationResult: SUCCESS` (every filter ran). A match, an unspecified or missing result, and
+  an incomplete screen (`PARTIAL` or `FAILURE`, where a skipped filter reports no match) all
+  block; an API error or the call's deadline raises, and the question is refused. With the
+  guardrail on, an empty template or project
   refuses at boot rather than building a malformed URL. It has not yet run against a live
   template, so it stays listed in `managed_readiness.py` and the API refuses to start on this
   profile at all. (It used to be a stub that always raised, which the orchestrator read as an
