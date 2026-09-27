@@ -229,6 +229,7 @@ class _FakeClient:
 _NO_MATCH = {
     "sanitizationResult": {
         "filterMatchState": "NO_MATCH_FOUND",
+        "invocationResult": "SUCCESS",
         "filterResults": {
             "pi_and_jailbreak": {"piAndJailbreakFilterResult": {"matchState": "NO_MATCH_FOUND"}},
             "malicious_uris": {"maliciousUriFilterResult": {"matchState": "NO_MATCH_FOUND"}},
@@ -238,6 +239,7 @@ _NO_MATCH = {
 _INJECTION_MATCH = {
     "sanitizationResult": {
         "filterMatchState": "MATCH_FOUND",
+        "invocationResult": "SUCCESS",
         "filterResults": {
             "pi_and_jailbreak": {
                 "piAndJailbreakFilterResult": {
@@ -286,7 +288,8 @@ def test_a_filter_match_blocks_even_without_the_aggregate_state() -> None:
     body = {"sanitizationResult": dict(_INJECTION_MATCH["sanitizationResult"])}
     del body["sanitizationResult"]["filterMatchState"]
     assert not parse_sanitize_response(body).allowed
-    assert parse_sanitize_response({"sanitizationResult": {"filterResults": {}}}).allowed
+    # No aggregate state and no filter match is NOT a pass: nothing said "no match".
+    assert not parse_sanitize_response({"sanitizationResult": {"filterResults": {}}}).allowed
 
 
 def test_an_http_error_raises_so_the_orchestrator_fails_closed() -> None:
