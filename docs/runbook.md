@@ -159,7 +159,7 @@ console says the item is not queued for review. Terraform states the switch as
 (or `on`/`off`) wins, and an emptied or unrecognised value refuses at boot. On under `gcp`, the
 service refuses to boot unless `NL2SQL_MODEL_ARMOR_TEMPLATE` and `GOOGLE_CLOUD_PROJECT` name the
 template and project it screens through; Terraform states them as `guardrail_enabled`,
-`model_armor_template` and `project_id`, and grants `roles/modelarmor.user` only while the
+the template `model_armor.tf` creates, and `project_id`, and grants `roles/modelarmor.user` only while the
 guardrail is on. Off binds an allow-all adapter and logs one warning at startup; a screen that
 is on but unreachable still refuses the question.
 

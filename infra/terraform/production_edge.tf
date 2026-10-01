@@ -120,16 +120,16 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "${local.render_env_prefix}_REVIEW_ROUTING"
         value = tostring(var.review_routing_enabled)
       }
-      # The guardrail switch, stated the same way. On, the service refuses to boot unless it
-      # also knows the Model Armor template it screens through (the project is
-      # GOOGLE_CLOUD_PROJECT above), so the template is set here when it carries a value: an
-      # emptied variable refuses at boot, a louder posture than leaving it off.
+      # The guardrail switch, stated the same way. On, the service refuses to boot unless it also
+      # knows the Model Armor template it screens through (the project is GOOGLE_CLOUD_PROJECT
+      # above), so the template this stack creates (model_armor.tf) is named here whenever the
+      # guardrail is on, and left off the service when it is stated off.
       env {
         name  = "${local.render_env_prefix}_GUARDRAIL"
         value = tostring(var.guardrail_enabled)
       }
       dynamic "env" {
-        for_each = var.model_armor_template == "" ? [] : [var.model_armor_template]
+        for_each = var.guardrail_enabled ? [google_model_armor_template.guardrail.template_id] : []
         content {
           name  = "${local.render_env_prefix}_MODEL_ARMOR_TEMPLATE"
           value = env.value
